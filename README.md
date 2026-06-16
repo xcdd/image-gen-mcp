@@ -8,6 +8,16 @@ Supports any OpenAI-compatible image API (`gpt-image-2`, DALL·E-style backends,
 
 ---
 
+## Sponsors
+
+本项目使用的算力由 **[Codox](https://www.codox.cc)** 赞助提供。
+
+Codox 是一个提供主流模型算力的平台，支持 GPT (Codex)、Claude Sonnet / Opus 等常用模型，可直接接入 Codex CLI、Claude Code、Claude Desktop 等工具使用。**优惠汇率：1 元人民币 = 5 美元额度**，欢迎大家前往体验。
+
+> Compute for this project is sponsored by [Codox](https://www.codox.cc) — an API platform supporting GPT (Codex), Claude Sonnet/Opus, and more. Compatible with Codex CLI, Claude Code, and Claude Desktop. **1 CNY = $5 USD in credits.** Give it a try!
+
+---
+
 ## Tools
 
 | Tool | Description |
