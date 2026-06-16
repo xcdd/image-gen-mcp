@@ -1,63 +1,53 @@
 # image-gen-mcp
 
-A **Model Context Protocol (MCP)** server that exposes image generation and editing as async tools for Claude (Cowork / Desktop / Code) or any other MCP host.
+[English](README.en.md)
 
-Calls are non-blocking: `generate_image` and `edit_image` return a `task_id` immediately (well within any 60-second MCP timeout). The host then polls `check_task` until the result is ready — even if the upstream takes 3+ minutes to generate.
+一个基于 **Model Context Protocol (MCP)** 的图片生成与编辑服务，可接入 Claude Cowork / Desktop / Code 或任意支持 MCP 的客户端。
 
-Supports any OpenAI-compatible image API (`gpt-image-2`, DALL·E-style backends, or chat-completions wrappers).
+调用是**非阻塞**的：`generate_image` 和 `edit_image` 立即返回 `task_id`（远在 60 秒超时之前），客户端随后通过 `check_task` 轮询结果——即使上游生图需要 3 分钟也没问题。
+
+兼容任何 OpenAI 格式的图片 API（`gpt-image-2`、DALL·E 系列、chat-completions 封装等）。
 
 ---
 
-## Sponsors
+## 赞助
 
 本项目使用的算力由 **[Codox](https://www.codox.cc)** 赞助提供。
 
 Codox 是一个提供主流模型算力的平台，支持 GPT (Codex)、Claude Sonnet / Opus 等常用模型，可直接接入 Codex CLI、Claude Code、Claude Desktop 等工具使用。**优惠汇率：1 元人民币 = 5 美元额度**，欢迎大家前往体验。
 
-> Compute for this project is sponsored by [Codox](https://www.codox.cc) — an API platform supporting GPT (Codex), Claude Sonnet/Opus, and more. Compatible with Codex CLI, Claude Code, and Claude Desktop. **1 CNY = $5 USD in credits.** Give it a try!
-
 ---
 
-## Tools
+## 工具列表
 
-| Tool | Description |
-|------|-------------|
-| `generate_image` | Submit a text-to-image task. Returns `task_id` immediately. |
-| `edit_image` | Submit an image-edit task. Supports inpainting, maskless editing, and up to 16 reference images. Returns `task_id` immediately. |
-| `check_task` | Poll a task by `task_id`. Returns `status` and `saved_paths` when done. |
-| `list_task_history` | List the 50 most recent tasks (filterable by status). |
-| `list_generated_images` | List files in a directory by glob (handy for enumerating prior outputs). |
+| 工具 | 说明 |
+|------|------|
+| `generate_image` | 提交文生图任务，立即返回 `task_id` |
+| `edit_image` | 提交图片编辑任务，支持蒙版修图、无蒙版编辑、最多 16 张参考图，立即返回 `task_id` |
+| `check_task` | 通过 `task_id` 查询任务状态，完成后返回文件路径 |
+| `list_task_history` | 查看最近 50 条任务历史，可按状态筛选 |
+| `list_generated_images` | 按 glob 列出目录中的图片文件 |
 
-### Async flow
+### 异步流程
 
 ```
 generate_image(prompt="...")
   → { task_id: "abc123", status: "pending" }
 
-check_task(task_id="abc123")   ← poll every 10-30 s
+check_task(task_id="abc123")   ← 每隔 10-30 秒轮询
   → { status: "running" }
 
 check_task(task_id="abc123")
-  → { status: "done", saved_paths: ["C:/Users/User/Claude/img_20250617_120501.png"], elapsed_seconds: 87.3 }
+  → { status: "done", saved_paths: ["C:/Users/User/Claude/img_xxx.png"], elapsed_seconds: 87.3 }
 ```
 
 ---
 
-## Install
+## 安装
 
-### Prerequisites
+### 前提条件
 
 - Python 3.10+
-- `pip` or `uv`
-
-### Linux / macOS
-
-```bash
-git clone https://github.com/xcdd/image-gen-mcp.git ~/.local/share/image-gen-mcp
-cd ~/.local/share/image-gen-mcp
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-```
 
 ### Windows
 
@@ -68,38 +58,44 @@ python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 ```
 
+### Linux / macOS
+
+```bash
+git clone https://github.com/xcdd/image-gen-mcp.git ~/.local/share/image-gen-mcp
+cd ~/.local/share/image-gen-mcp
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
 ---
 
-## Register the server
+## 注册到 MCP 客户端
 
-Add an entry to the MCP host's config under `mcpServers`.
+### Claude Cowork / Desktop（Windows）
 
-### Claude Cowork / Desktop (Windows)
-
-Config file: `C:\Users\<you>\AppData\Local\Claude-3p\claude_desktop_config.json`
+配置文件：`C:\Users\<用户名>\AppData\Local\Claude-3p\claude_desktop_config.json`
 
 ```json
 "image-gen": {
-  "command": "C:\\Users\\<you>\\.claude\\image_gen_mcp\\.venv\\Scripts\\python.exe",
-  "args": ["C:\\Users\\<you>\\.claude\\image_gen_mcp\\server.py"],
+  "command": "C:\\Users\\<用户名>\\.claude\\image_gen_mcp\\.venv\\Scripts\\python.exe",
+  "args": ["C:\\Users\\<用户名>\\.claude\\image_gen_mcp\\server.py"],
   "env": {
-    "IMAGE_API_BASE_URL": "https://your-openai-compatible-host",
+    "IMAGE_API_BASE_URL": "https://your-api-host",
     "IMAGE_API_KEY": "sk-..."
   }
 }
 ```
 
-### Claude Cowork / Desktop (macOS / Linux)
+### Claude Cowork / Desktop（macOS / Linux）
 
-Config file: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
-or `~/.config/Claude/claude_desktop_config.json` (Linux)
+配置文件：`~/Library/Application Support/Claude/claude_desktop_config.json`（macOS）
 
 ```json
 "image-gen": {
-  "command": "/home/<you>/.local/share/image-gen-mcp/.venv/bin/python",
-  "args": ["/home/<you>/.local/share/image-gen-mcp/server.py"],
+  "command": "/home/<用户名>/.local/share/image-gen-mcp/.venv/bin/python",
+  "args": ["/home/<用户名>/.local/share/image-gen-mcp/server.py"],
   "env": {
-    "IMAGE_API_BASE_URL": "https://your-openai-compatible-host",
+    "IMAGE_API_BASE_URL": "https://your-api-host",
     "IMAGE_API_KEY": "sk-..."
   }
 }
@@ -107,7 +103,7 @@ or `~/.config/Claude/claude_desktop_config.json` (Linux)
 
 ### Claude Code
 
-Edit `~/.claude/mcp.json`:
+编辑 `~/.claude/mcp.json`：
 
 ```json
 {
@@ -116,7 +112,7 @@ Edit `~/.claude/mcp.json`:
       "command": "/path/to/.venv/bin/python",
       "args": ["/path/to/server.py"],
       "env": {
-        "IMAGE_API_BASE_URL": "https://your-openai-compatible-host",
+        "IMAGE_API_BASE_URL": "https://your-api-host",
         "IMAGE_API_KEY": "sk-..."
       }
     }
@@ -124,62 +120,62 @@ Edit `~/.claude/mcp.json`:
 }
 ```
 
-Restart the host after editing. You should see `image-gen` listed in MCP plugins with 5 tools.
+配置完成后重启客户端，MCP 插件列表中应出现 `image-gen`，包含 5 个工具。
 
 ---
 
-## Environment variables
+## 环境变量
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `IMAGE_API_BASE_URL` | *(required)* | Upstream root URL, e.g. `https://api.openai.com`. No trailing slash. The server appends `/v1/images/generations` etc. |
-| `IMAGE_API_KEY` | *(required)* | Bearer token (`Authorization: Bearer ...`). |
-| `IMAGE_API_BACKEND` | `images` | `images` / `responses` / `chat`. See [Backends](#backends). |
-| `IMAGE_DEFAULT_MODEL` | `gpt-image-2` | Default model if not passed by the caller. |
-| `IMAGE_MAX_CONCURRENT` | `10` | Max concurrent in-flight requests (asyncio semaphore). |
-| `IMAGE_REQUEST_TIMEOUT` | `1800` | Per-request timeout in seconds. High-quality generations can take 3+ minutes. |
-| `IMAGE_RETRY_ATTEMPTS` | `3` | Retry count on transient errors (5xx, timeout, connection reset). Backoff: 2 s / 5 s / 10 s. |
-| `IMAGE_GEN_PATH` | `/v1/images/generations` | Override endpoint path for generation. |
-| `IMAGE_EDIT_PATH` | `/v1/images/edits` | Override endpoint path for edits. |
-| `IMAGE_CHAT_PATH` | `/v1/chat/completions` | Override endpoint path for chat backend. |
-| `IMAGE_RESPONSES_PATH` | `/v1/responses` | Override endpoint path for responses backend. |
-
----
-
-## Backends
-
-| Backend | Endpoint | Notes |
-|---------|----------|-------|
-| `images` *(default)* | `POST /v1/images/generations` | Standard OpenAI image API. Use this unless the provider says otherwise. |
-| `responses` | `POST /v1/responses` | Newer Responses API with tool-call style. |
-| `chat` | `POST /v1/chat/completions` | For providers that wrap image generation inside chat completions. Size / quality constraints are encoded into the prompt as text hints. |
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `IMAGE_API_BASE_URL` | **必填** | 上游 API 根地址，例如 `https://www.codox.cc`。不含尾部斜杠，服务端会自动拼接 `/v1/images/generations` 等路径 |
+| `IMAGE_API_KEY` | **必填** | Bearer Token |
+| `IMAGE_API_BACKEND` | `images` | 后端类型：`images` / `responses` / `chat`，见[后端说明](#后端说明) |
+| `IMAGE_DEFAULT_MODEL` | `gpt-image-2` | 调用方未指定 model 时的默认值 |
+| `IMAGE_MAX_CONCURRENT` | `10` | 最大并发请求数（asyncio 信号量） |
+| `IMAGE_REQUEST_TIMEOUT` | `1800` | 单次请求超时秒数，高质量生图可能需要 3 分钟以上 |
+| `IMAGE_RETRY_ATTEMPTS` | `3` | 遇到 5xx / 超时 / 连接重置时的重试次数，退避间隔 2s / 5s / 10s |
+| `IMAGE_GEN_PATH` | `/v1/images/generations` | 生图端点路径（可覆盖） |
+| `IMAGE_EDIT_PATH` | `/v1/images/edits` | 编辑端点路径（可覆盖） |
+| `IMAGE_CHAT_PATH` | `/v1/chat/completions` | chat 后端端点路径 |
+| `IMAGE_RESPONSES_PATH` | `/v1/responses` | responses 后端端点路径 |
 
 ---
 
-## Tool reference
+## 后端说明
+
+| 后端 | 端点 | 适用场景 |
+|------|------|---------|
+| `images`（默认） | `POST /v1/images/generations` | 标准 OpenAI 图片 API，优先选择 |
+| `responses` | `POST /v1/responses` | 新版 Responses API（工具调用形式） |
+| `chat` | `POST /v1/chat/completions` | 部分平台通过 chat completions 封装图片生成，尺寸/质量参数以文本形式注入 prompt |
+
+---
+
+## 工具参数详解
 
 ### `generate_image`
 
 ```jsonc
 {
-  "prompt": "A watercolor cat on a sunny windowsill",  // required
+  "prompt": "水彩风格的猫咪坐在窗台上",  // 必填
   "model": "gpt-image-2",
   "size": "1024x1024",       // 1024x1024 | 1536x1024 | 1024x1536 | 2048x2048
   "n": 1,                    // 1-4
   "quality": "auto",         // auto | high | medium | low
   "output_format": "png",    // png | jpeg | webp
-  "negative_prompt": "blurry, low quality",
-  "style_intensity": 50,     // 0-100
+  "negative_prompt": "模糊, 低质量",
+  "style_intensity": 50,     // 风格强度 0-100
   "background": "auto",      // auto | transparent | white | opaque
   "seed": 42,
-  "extra": {},               // raw fields passed through to the API
+  "extra": {},               // 原样透传给 API 的额外字段
   "output_dir": "C:/Users/User/Claude",
   "filename_prefix": "cat_watercolor",
   "backend": "images"
 }
 ```
 
-Returns immediately:
+立即返回：
 
 ```json
 { "task_id": "3f9a...", "status": "pending", "message": "Task submitted. Use check_task to poll for completion." }
@@ -189,34 +185,34 @@ Returns immediately:
 
 ### `edit_image`
 
-Supports all native gpt-image-2 editing modes:
+支持 gpt-image-2 全部原生编辑模式：
 
-- **Inpainting** — provide `mask_path` (PNG with alpha channel); transparent pixels define the region to edit, opaque pixels are preserved.
-- **Maskless editing** — omit `mask_path`; describe what to change in `prompt` and the model locates the region automatically.
-- **Multi-image composition / style transfer** — pass up to 16 source images via `image_paths`; the first is the primary image, the rest serve as references.
+- **蒙版修图（Inpainting）**：提供 `mask_path`（含 Alpha 通道的 PNG），透明区域为待编辑区域，不透明区域保持不变
+- **无蒙版编辑**：不提供 `mask_path`，通过 `prompt` 描述要修改的内容，模型自动定位区域
+- **多图合成 / 风格迁移**：通过 `image_paths` 提供最多 16 张图，第一张为主图，其余作为参考
 
 ```jsonc
 {
-  "prompt": "Replace the background with a sunset beach, keep the subject",  // required
-  "image_path": "C:/Users/User/Claude/photo.png",   // single image (OR use image_paths)
-  "image_paths": [                                   // up to 16 images
+  "prompt": "把背景换成日落海滩，保留主体人物",  // 必填
+  "image_path": "C:/Users/User/Claude/photo.png",    // 单张图（与 image_paths 二选一）
+  "image_paths": [                                    // 多张图（最多 16 张）
     "C:/Users/User/Claude/primary.png",
     "C:/Users/User/Claude/style_ref.png"
   ],
-  "mask_path": "C:/Users/User/Claude/mask.png",     // optional; transparent = edit area
+  "mask_path": "C:/Users/User/Claude/mask.png",      // 可选，透明区域 = 编辑范围
   "model": "gpt-image-2",
-  "size": "auto",      // auto | 1024x1024 | 1536x1024 | 1024x1536
-  "n": 1,              // 1-10 output variants
+  "size": "auto",            // auto | 1024x1024 | 1536x1024 | 1024x1536
+  "n": 1,                    // 输出变体数量 1-10
   "quality": "auto",
   "output_format": "png",
-  "output_compression": 85,   // 0-100, only for jpeg/webp
+  "output_compression": 85,  // 压缩率 0-100，仅对 jpeg/webp 生效
   "output_dir": "C:/Users/User/Claude",
   "filename_prefix": "edited",
   "backend": "images"
 }
 ```
 
-Returns the same `task_id` pattern as `generate_image`.
+同样立即返回 `task_id`，用 `check_task` 轮询。
 
 ---
 
@@ -226,7 +222,7 @@ Returns the same `task_id` pattern as `generate_image`.
 { "task_id": "3f9a..." }
 ```
 
-Response when done:
+完成时的返回示例：
 
 ```json
 {
@@ -247,7 +243,7 @@ Response when done:
 { "status_filter": "done" }   // all | done | error | pending | running
 ```
 
-Returns the 50 most recent completed tasks (most recent first).
+返回最近 50 条任务，按完成时间倒序排列。
 
 ---
 
@@ -259,35 +255,34 @@ Returns the 50 most recent completed tasks (most recent first).
 
 ---
 
-## Tips for callers
+## 使用建议
 
-1. **Always set `output_dir`** to an absolute path the user has write access to. The default `C:/Users/User/Claude` is only correct on the author's machine.
-2. **Set `filename_prefix`** so outputs are easy to identify later.
-3. For portraits / posters prefer `1024x1536`; for landscapes `1536x1024`.
-4. For text in the image, write the prompt in the same language as the desired text — gpt-image-2 handles Chinese and English well.
-5. `quality: "high"` produces better results but may take 2-3× longer.
-6. Multiple calls to `generate_image` can be submitted without waiting — the worker runs up to `IMAGE_MAX_CONCURRENT` (default 10) in parallel.
-
----
-
-## Troubleshooting
-
-| Symptom | Likely cause | Fix |
-|---------|--------------|-----|
-| MCP plugin shows as disconnected | Wrong path in `command` / `args` | Verify both are absolute paths and `.venv` exists |
-| `IMAGE_API_BASE_URL env var is not set` | Missing `env` block in config | Add the `env` block as a sibling of `args` in the config JSON |
-| `Upstream error 401/403` | Bad API key | Check `IMAGE_API_KEY` |
-| `Upstream error 404` | Wrong backend or endpoint | Try a different `IMAGE_API_BACKEND`; override `IMAGE_EDIT_PATH` if needed |
-| Task stays `pending` forever | Worker not started (bug) | Restart the MCP host to reload the server |
-| Image looks wrong but no error | Prompt / model limitation | Iterate on prompt; try `quality: "high"` |
+1. **始终指定 `output_dir`** 为绝对路径，默认值仅适用于作者本机
+2. **设置 `filename_prefix`** 让输出文件名有意义，便于后续管理
+3. 竖版海报用 `1024x1536`，横版用 `1536x1024`，方形用 `1024x1024`
+4. 图片内需要出现文字时，prompt 使用对应语言效果更佳
+5. `quality: "high"` 效果更好，但耗时约为默认的 2-3 倍
+6. 可同时提交多个任务，worker 默认并发 10 个（由 `IMAGE_MAX_CONCURRENT` 控制）
 
 ---
 
-## Security
+## 常见问题
 
-- The API key is never logged and never written to disk. It only lives in the process environment.
-- `output_dir` is resolved to an absolute path and created if absent. Relative paths are rejected.
-- No image content is read back to the upstream.
+| 现象 | 可能原因 | 解决方法 |
+|------|---------|---------|
+| MCP 插件显示断开 | `command` 或 `args` 路径错误 | 确认两者均为绝对路径，且 `.venv` 已创建 |
+| `IMAGE_API_BASE_URL env var is not set` | 配置 JSON 缺少 `env` 块 | 在与 `args` 同级位置添加 `env` 块 |
+| `Upstream error 401/403` | API Key 无效 | 检查 `IMAGE_API_KEY` |
+| `Upstream error 404` | 后端类型或端点路径错误 | 换用其他 `IMAGE_API_BACKEND`，或覆盖端点路径变量 |
+| 任务一直 pending | Worker 未启动（异常） | 重启 MCP 客户端 |
+
+---
+
+## 安全说明
+
+- API Key 不会被记录日志，也不会写入磁盘，仅存在于进程环境变量中
+- `output_dir` 会被解析为绝对路径并自动创建，相对路径会被拒绝
+- 输出目录中的图片内容不会被回传给上游 API
 
 ---
 
